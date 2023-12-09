@@ -8,6 +8,8 @@
 // and public message number npub[0],npub[1],...
 // and secret key k[0],k[1],...
 void string2hexString(unsigned char* input, int clen, char* output);
+void hexString2string(char* input, int clen, unsigned char* output);
+
 static unsigned char ascii2byte(char *hexstring, unsigned char *bytearray);
 
 int crypto_aead_encrypt(

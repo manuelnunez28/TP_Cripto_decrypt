@@ -1,7 +1,6 @@
 #include <Arduino.h>
 
 // put function declarations here:
-#include "max6675.h"
 #include <WiFi.h>
 #include "PubSubClient.h"
 #include "ascon/api.h"
@@ -12,12 +11,7 @@
 #include <stdio.h>
 #define CRYPTO_BYTES 64
 
-int thermoDO = 4;
-int thermoCS = 5;
-int thermoCLK = 6;
-
-char stemp[10];
-float temp;
+//char encryptedTemp[10];
 
 // WiFi 
 const char *ssid = "Fibertel WiFi367 2.4GHz"; // Nombre WiFi
@@ -36,10 +30,12 @@ const int mqtt_port = 1883;
 
 void callback(char *topic, byte *payload, unsigned int length);
 
+
 WiFiClient espClient;
 PubSubClient client(espClient);
 static unsigned long long mlen;
 static unsigned long long clen;
+static unsigned long long clen2;
 
 static unsigned char plaintext[CRYPTO_BYTES];
 static unsigned char cipher[CRYPTO_BYTES]; 
@@ -54,20 +50,15 @@ static char chex[CRYPTO_BYTES]="";
 static char keyhex[2*CRYPTO_KEYBYTES+1]="0123456789ABCDEF0123456789ABCDEF";
 static char nonce[2*CRYPTO_NPUBBYTES+1]="000000000000111111111111";
 static char add[CRYPTO_ABYTES]="";
-static char stringToSendToMosquitto[500];
+static unsigned char plaintextDecrypt[CRYPTO_BYTES];
 static char strAux[100];
-
-MAX6675 thermocouple(thermoCLK, thermoCS, thermoDO);
+static char prueba[100];
 
 
 void setup() {
 
     // Se setea el baudrate a 9600;
     Serial.begin(9600);    
-  
-    Serial.println("MAX6675 test");
-    // espera a que el MAX6675 se estabilice
-    delay(500);
 
     // Conexion con la red WiFi
     WiFi.begin(ssid, password);
@@ -94,30 +85,23 @@ void setup() {
         }
     }
     
-    // Publicación y suscripción
+    // Suscripción al topico de mqtt
     client.subscribe(topic);
 
 }
 
 void loop() {
-  //Se guarda la temperatura en grados celsius
-  temp = thermocouple.readCelsius();
-  
-  dtostrf(temp, 4, 2, stemp); //Convierte el float a una cadena
-
-  strcat(stemp, " °C");
-  
-  strcpy(plaintext, stemp);
-  crypto_aead_encrypt(cipher,&clen,plaintext,strlen(plaintext),ad,strlen(ad),nsec,npub,key);
-  
+ 
   //Se convierte cipher a hexa y se guarda en chex
-  string2hexString(cipher,clen,chex);
+  //string2hexString(cipher,clen,chex);
 
-  sprintf(stringToSendToMosquitto,"%s",chex);
-  sprintf(strAux, "Message plaintext: %s\n", stemp);
-  Serial.print(strAux);
+  //crypto_aead_decrypt(plaintextDecrypt,&mlen,nsec,cipher,clen,ad,strlen(ad),npub,key);
 
-  client.publish(topic, stringToSendToMosquitto);
+  //plaintextDecrypt[mlen]='\0';
+
+  //Serial.print(strAux);
+
+  
   client.loop();
   
   // Para que se actualicen los datos del MAX6675 se necesita un delay minimo de 250ms
@@ -126,12 +110,25 @@ void loop() {
 
 
 void callback(char *topic, byte *payload, unsigned int length) {
+    String encryptedTemp;
     Serial.print("Message arrived in topic: ");
     Serial.println(topic);
     Serial.print("Message encrypted:");
     for (int i = 0; i < length; i++) {
         Serial.print((char) payload[i]);
+        encryptedTemp += (char)payload[i];
     }
+    strcpy(chex, encryptedTemp.c_str());
+    clen = strlen(chex);
+    //string2hexString(cipher, clen, chex);
+    hexString2string(chex, clen, cipher);
+
+    crypto_aead_decrypt(plaintextDecrypt,&mlen,nsec,cipher,clen,ad,strlen(ad),npub,key);
+
+    plaintextDecrypt[mlen]='\0';
+    sprintf(strAux, "\nMessage decrypted: %s\n", plaintextDecrypt);
+    Serial.print(strAux);
+
     Serial.println();
     Serial.println("-----------------------");
 }
@@ -365,5 +362,21 @@ void *hextobyte(char *hexstring, unsigned char* bytearray ) {
 
     for (i = 0; i < (str_len / 2); i++) {
         sscanf(hexstring + 2*i, "%02x", &bytearray[i]);
+    }
+}
+
+
+void hexString2string(char* input, int clen, unsigned char* output)
+{
+    int loop;
+    int i; 
+    
+    i=0;
+    loop=0;
+    
+    for (i=0;i<clen;i+=2){
+        sscanf((char*)(input+i),"%02X", &output[loop]);
+        loop+=1;
+
     }
 }
