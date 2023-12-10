@@ -23,7 +23,7 @@ static unsigned char nsec[CRYPTO_ABYTES]="";
 static unsigned char key[CRYPTO_KEYBYTES];
 static char chex[CRYPTO_BYTES]="";
 static char keyhex[2*CRYPTO_KEYBYTES+1]="0123456789ABCDEF0123456789ABCDEF";
-static char nonce[2*CRYPTO_NPUBBYTES+1]="000000000000111111111111";
+static char nonce[2*CRYPTO_NPUBBYTES+1]="00000000000000001111111111111111";
 static char add[CRYPTO_ABYTES]="";
 
 //=====[WIFI AND MQTT BROKER]==================================== 
@@ -37,6 +37,9 @@ const char *mqtt_broker = "192.168.0.248"; // MQTT Broker
 const char *topic = "mosquitto/esp32";  //MOSQUITTO Topic
 const int mqtt_port = 1883; //MQTT Port
 static char stringToSendToMosquitto[500];
+
+//=====[AUXILIAR ASCON]===========================================
+const char defaultNonce[2*CRYPTO_NPUBBYTES+1]="00000000000000001111111111111111";
 
 //=====[AUXILIAR VARIABLES]=======================================
 static char strAux[100];
@@ -93,22 +96,40 @@ void callback(char *topic, byte *payload, unsigned int length) {
     String encryptedTemp;
     Serial.print("Message arrived in topic: ");
     Serial.println(topic);
-    Serial.print("Message encrypted:");
+    Serial.print("Message:");
     for (int i = 0; i < length; i++) {
         Serial.print((char) payload[i]);
         encryptedTemp += (char)payload[i];
     }
-    strcpy(chex, encryptedTemp.c_str());
-    clen = strlen(chex);
-    //string2hexString(cipher, clen, chex);
-    hexString2string(chex, clen, cipher);
+    if(!encryptedTemp.compareTo("1"))
+    {
+      Serial.print("Temperature reading initialized\n");
+      strcpy(nonce, defaultNonce);
+    }
+    else {
+      strcpy(chex, encryptedTemp.c_str());
+      clen = strlen(chex)-1;
+    
+      hexString2string(chex, clen, cipher);
 
-    crypto_aead_decrypt(plaintextDecrypt,&mlen,nsec,cipher,clen,ad,strlen(ad),npub,key);
+      hextobyte(keyhex,key);
+      hextobyte(nonce,npub);
 
-    plaintextDecrypt[mlen]='\0';
-    sprintf(strAux, "\nMessage decrypted: %s\n", plaintextDecrypt);
-    Serial.print(strAux);
+      crypto_aead_decrypt(plaintextDecrypt,&mlen,nsec,cipher,clen,ad,strlen(ad),npub,key);
 
-    Serial.println();
-    Serial.println("-----------------------");
+      plaintextDecrypt[mlen]='\0';
+      sprintf(strAux, "\nMessage decrypted: %s\n", plaintextDecrypt);
+      Serial.print(strAux);
+
+      Serial.println();
+      Serial.println("-----------------------");
+    
+      for(int i = 0; i < 2*CRYPTO_NPUBBYTES + 1; i++)
+      {
+        nonce[i] = plaintextDecrypt[i+23];
+      }
+      nonce[2*CRYPTO_NPUBBYTES] = '\0';
+
+    }
+    
 }
