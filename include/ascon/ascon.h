@@ -14,5 +14,5 @@ void ascon_adata(state_t* s, const uint8_t* ad, uint64_t adlen);
 void ascon_encrypt(state_t* s, uint8_t* c, const uint8_t* m, uint64_t mlen);
 void ascon_decrypt(state_t* s, uint8_t* m, const uint8_t* c, uint64_t clen);
 void ascon_final(state_t* s, const uint8_t* k);
-
+void ascon_loadkey(word_t* K0, word_t* K1, word_t* K2, const uint8_t* k);
 #endif /* ASCON_H */
