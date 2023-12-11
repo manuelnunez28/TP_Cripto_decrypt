@@ -6,8 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
-void ascon_encrypt(state_t* s, uint8_t* c, const uint8_t* m,
-                               uint64_t mlen) {
+void ascon_encrypt(state_t* s, uint8_t* c, const uint8_t* m, uint64_t mlen) {
   const int nr = (ASCON_RATE == 8) ? 6 : 8;
   /* full plaintext blocks */
   while (mlen >= ASCON_RATE) {
@@ -40,8 +39,7 @@ void ascon_encrypt(state_t* s, uint8_t* c, const uint8_t* m,
   printstate("process plaintext", s);
 }
 
- void ascon_decrypt(state_t* s, uint8_t* m, const uint8_t* c,
-                               uint64_t clen) {
+void ascon_decrypt(state_t* s, uint8_t* m, const uint8_t* c, uint64_t clen) {
   const int nr = (ASCON_RATE == 8) ? 6 : 8;
   /* full ciphertext blocks */
   while (clen >= ASCON_RATE) {
@@ -85,19 +83,18 @@ void ascon_encrypt(state_t* s, uint8_t* c, const uint8_t* m,
 
 void string2hexString(unsigned char* input, int clen, char* output)
 {
-    int loop;
-    int i; 
+  int loop;
+  int i; 
+  
+  i=0;
+  loop=0;
     
-    i=0;
-    loop=0;
-    
-    for (i=0;i<clen;i+=2){
-        sprintf((char*)(output+i),"%02X", input[loop]);
-        loop+=1;
-
-    }
+  for (i=0; i<clen; i+=2){
+    sprintf((char*)(output+i),"%02X", input[loop]);
+    loop+=1;
+  }
     //insert NULL at the end of the output string
-    output[i++] = '\0';
+  output[i++] = '\0';
 }
 
 int crypto_aead_encrypt(unsigned char* c, unsigned long long* clen,
@@ -140,27 +137,23 @@ int crypto_aead_decrypt(unsigned char* m, unsigned long long* mlen,
 }
 
 void hextobyte(char *hexstring, unsigned char* bytearray ) {
+  int i;
+  int str_len = strlen(hexstring);
 
-    int i;
-
-    int str_len = strlen(hexstring);
-
-    for (i = 0; i < (str_len / 2); i++) {
-        sscanf(hexstring + 2*i, "%02x", &bytearray[i]);
-    }
+  for (i = 0; i < (str_len / 2); i++) {
+    sscanf(hexstring + 2*i, "%02x", &bytearray[i]);
+  }
 }
 
-void hexString2string(char* input, int clen, unsigned char* output)
-{
-    int loop;
-    int i; 
+void hexString2string(char* input, int clen, unsigned char* output) {
+  int loop;
+  int i; 
     
-    i=0;
-    loop=0;
+  i=0;
+  loop=0;
     
-    for (i=0;i<clen;i+=2){
-        sscanf((char*)(input+i),"%02X", &output[loop]);
-        loop+=1;
-
-    }
+  for (i=0; i<clen; i+=2) {
+    sscanf((char*)(input+i),"%02X", &output[loop]);
+    loop+=1;
+  }
 }
